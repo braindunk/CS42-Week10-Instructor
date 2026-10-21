@@ -37,9 +37,27 @@ function create() {
     this.matter.world.setBounds(0, 0, game.config.width, game.config.height);
     this.add.image(0, 0, 'sheet', 'background').setOrigin(0, 0);
 
-    // sprites are positioned at their center of mass
+    // PhysicsEditor vertices are in source-image pixels. Matter recenters the
+    // body on their centroid, and centerOfMass is only a 0-1 ratio, so recover
+    // that centroid and pin the sprite's top-left at (0, 280).
     var ground = this.matter.add.sprite(0, 0, 'sheet', 'ground', {shape: shapes.ground});
-    ground.setPosition(0 + ground.centerOfMass.x, 280 + ground.centerOfMass.y);  // corrected position: (0,280)
+    var minX = Infinity;
+    var minY = Infinity;
+
+    shapes.ground.fixtures.forEach(function (fixture) {
+        fixture.vertices.forEach(function (polygon) {
+            polygon.forEach(function (point) {
+                if (point.x < minX) { minX = point.x; }
+                if (point.y < minY) { minY = point.y; }
+            });
+        });
+    });
+
+    var centroidX = minX - ground.body.bounds.min.x + ground.body.position.x;
+    var centroidY = minY - ground.body.bounds.min.y + ground.body.position.y;
+
+    ground.setOrigin(centroidX / ground.displayWidth, centroidY / ground.displayHeight);
+    ground.setPosition(centroidX, 280 + centroidY);
 
     this.matter.add.sprite(200, 50, 'sheet', 'crate', {shape: shapes.crate});
     this.matter.add.sprite(250, 250, 'sheet', 'banana', {shape: shapes.banana});
